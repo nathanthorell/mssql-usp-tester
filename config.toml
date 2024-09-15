@@ -1,5 +1,6 @@
 [usp_tester]
 schema = "report"
+logging_level = "summary" # "verbose" or "errors_only" or "summary"
 
 [usp_tester.defaults]
 start_date = "2024-01-01"

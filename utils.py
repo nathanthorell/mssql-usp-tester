@@ -23,7 +23,7 @@ def get_default_for_date_type(param_name, date_defaults):
         return date_defaults["start_date"]
 
 
-def execute_procedure(conn, schema, proc_name, defaults):
+def execute_procedure(conn, schema, proc_name, defaults, logging_level):
     """
     Execute a single stored procedure with the given parameters.
 
@@ -31,6 +31,7 @@ def execute_procedure(conn, schema, proc_name, defaults):
     :param schema: The schema name for the stored procedure.
     :param proc_name: The name of the stored procedure.
     :param defaults: A dictionary containing default values for parameter types.
+    :param logging_level: Expects a string value ("verbose", "errors_only", or "summary").
     """
     cursor = conn.cursor()
 
@@ -73,18 +74,39 @@ def execute_procedure(conn, schema, proc_name, defaults):
         exec_query = f"EXEC {schema}.{proc_name} {placeholder_str}"
 
         start_time = time.time()
-        print(f"Running: {exec_query}")
+
+        if logging_level == "verbose":
+            print(f"Running: {exec_query}")
+
         cursor.execute(exec_query)
         conn.commit()
-        end_time = time.time()
 
+        end_time = time.time()
         elapsed_time = end_time - start_time
-        print(
-            f"Executed {proc_name} with arguments: {proc_args} in {elapsed_time:.2f} seconds"
-        )
+
+        if logging_level == "verbose":
+            print(
+                f"Executed {proc_name} with arguments: {proc_args} in {elapsed_time:.2f} seconds"
+            )
+
+        return {
+            "proc_name": proc_name,
+            "status": "success",
+            "elapsed_time": elapsed_time,
+        }
 
     except pyodbc.Error as ex:
-        print(f"Error executing {proc_name}: {ex}")
+        end_time = time.time()
+
+        if logging_level in ["verbose", "errors_only"]:
+            print(f"Error executing {proc_name}: {ex}")
+
+        return {
+            "proc_name": proc_name,
+            "status": "fail",
+            "elapsed_time": None,
+            "error_message": str(ex),
+        }
 
     finally:
         cursor.close()
